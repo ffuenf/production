@@ -19,7 +19,7 @@ $(dirname ${BASH_SOURCE[0]})/build-js.sh
 find ${ADMIN_ROOT} -name 'node_modules' -type d -prune -print -exec rm -rf '{}' \;
 find ${STOREFRONT_ROOT} -name 'node_modules' -type d -prune -print -exec rm -rf '{}' \;
 
-COMMIT_MSG=${COMMIT_MSG:-"Nightly Release $TAG"}
+COMMIT_MSG=${COMMIT_MSG:-"Release $TAG"}
 
 prepare_repo() {
     git -C repos/${1} add .
@@ -48,10 +48,3 @@ mv composer.json.new composer.json
 rm -Rf composer.lock vendor/shopware/* vendor/autoload.php
 composer install --ignore-platform-reqs --no-interaction
 
-PLATFORM_COMMIT_SHA=${PLATFORM_COMMIT_SHA:-$(cat vendor/shopware/core/PLATFORM_COMMIT_SHA)}
-
-docker build . -t "${IMAGE_NAME}:${PLATFORM_COMMIT_SHA}"
-docker push "${IMAGE_NAME}:${PLATFORM_COMMIT_SHA}"
-
-docker tag "${IMAGE_NAME}:${PLATFORM_COMMIT_SHA}" "${IMAGE_NAME}:${TAG}"
-docker push "${IMAGE_NAME}:${TAG}"

@@ -34,4 +34,4 @@
 
 .cache/
 
-var/build-cache
+.envrc
