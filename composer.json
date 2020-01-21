@@ -33,7 +33,7 @@
     "repositories": [
       {
         "type": "path",
-        "url": "custom/plugins/*",
+        "url": "custom/static-plugins/*",
         "options": {
           "symlink": true
         }

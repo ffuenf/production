@@ -1,5 +1,6 @@
 custom/*
 !custom/plugins/
+!custom/static-plugins/
 
 /vendor/
 /bin/vendor/

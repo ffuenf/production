@@ -1,4 +1,13 @@
-*
+log/*
+cache/*
+test/*
+queue/*
+build-cache/*
+
+!/log/.gitkeep
+!/cache/.gitkeep
+!/queue/.gitkeep
+!/test/.gitkeep
 
 !.gitignore
 !plugins.json

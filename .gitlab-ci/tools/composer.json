@@ -8,6 +8,9 @@
         "guzzlehttp/guzzle": "^6.5",
         "ext-json": "*"
     },
+    "require-dev": {
+        "phpunit/phpunit": "8.5.2"
+    },
     "license": "MIT",
     "authors": [
         {
@@ -19,6 +22,11 @@
     "autoload": {
         "psr-4": {
             "Shopware\\CI\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Shopware\\CI\\Test\\": "tests/"
         }
     }
 }

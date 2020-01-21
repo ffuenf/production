@@ -4,6 +4,7 @@ namespace Shopware\CI\Command;
 
 use Composer\Semver\Semver;
 use Composer\Semver\VersionParser;
+use Shopware\CI\Service\TaggingService;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -13,11 +14,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 class ShowNextTagCommand extends Command
 {
     public static $defaultName = 'show-next-tag';
-
-    /**
-     * @var string
-     */
-    private $repository;
 
     protected function configure(): void
     {
@@ -29,15 +25,12 @@ class ShowNextTagCommand extends Command
         ;
     }
 
-    /** @var array */
-    private static $stabilities = array('stable', 'RC', 'beta', 'alpha', 'dev');
-
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $this->repository = $input->getArgument('repository') ?? getcwd();
-        $tags = $this->getTags();
+        $repository = $input->getArgument('repository') ?? getcwd();
 
-        $composerJson = $this->getComposerJson();
+        $rootPath = self::getRootPath($repository);
+        $composerJson = \json_decode(file_get_contents($rootPath . '/composer.json'), true);
 
         $constraint = $input->getOption('constraint');
         if (!$constraint) {
@@ -48,32 +41,23 @@ class ShowNextTagCommand extends Command
         if (!$minimumStability) {
             $minimumStability = $composerJson['minimum-stability'];
         }
-        $minimumStability = VersionParser::normalizeStability($minimumStability);
 
-        $allowedStabilities = array_slice(
-            self::$stabilities,
-            0,
-            1 + array_search($minimumStability, self::$stabilities, true)
-        );
+        $taggingService = new TaggingService(new VersionParser(), $minimumStability);
+        $tags = self::getTags($repository);
+        $matchingVersions = $taggingService->getMatchingVersions($tags, $constraint);
 
-        $matchingTags = $this->getMatchingTags($tags, $constraint, $allowedStabilities);
-        if (empty($matchingTags)) {
-            $nextVersion = [$this->getInitialTag($constraint, $minimumStability)];
-        } else {
-            $bestMatch = array_pop($matchingTags);
-            $nextVersion = $this->getNextVersion($bestMatch, $minimumStability);
-        }
+        $lastVersion = array_pop($matchingVersions);
 
-        $output->writeln($nextVersion);
+        $output->writeln($taggingService->getNextTag($constraint, $lastVersion));
 
         return 0;
     }
 
-    private function getTags(): array
+    public static function getTags(string $repository): array
     {
         $output = [];
         $returnCode = 0;
-        exec('git -C ' . escapeshellarg($this->repository) . ' tag --list ', $output, $returnCode);
+        exec('git -C ' . escapeshellarg($repository) . ' tag --list ', $output, $returnCode);
 
         if ($returnCode !== 0) {
             throw new \RuntimeException('Failed to list tags');
@@ -82,60 +66,15 @@ class ShowNextTagCommand extends Command
         return $output;
     }
 
-    private function getComposerJson(): array
+    public static function getRootPath(string $repository): string
     {
         $returnCode = 0;
-        $rootDir = exec('git -C ' . escapeshellarg($this->repository) .' rev-parse --show-toplevel', $output, $returnCode);
+        $rootDir = exec('git -C ' . escapeshellarg($repository) .' rev-parse --show-toplevel', $output, $returnCode);
 
         if ($returnCode !== 0) {
             throw new \RuntimeException('Failed to list tags');
         }
 
-        $path = $rootDir . '/composer.json';
-
-        return \json_decode(file_get_contents($path), true);
-    }
-
-    private function getMatchingTags(array $tags, string $constraint, array $allowedStabilities ): array
-    {
-        $versions = Semver::satisfiedBy($tags, $constraint);
-        $versions = array_filter($versions, static function ($version) use ($allowedStabilities) {
-            return in_array(VersionParser::parseStability($version), $allowedStabilities, true);
-        });
-
-        return Semver::sort($versions);
-    }
-
-    private function getNextVersion(string $lastVersion): string
-    {
-        if(!preg_match('/(v6\.\d+\.)(\d+)(-(rc|beta|alpha|dev)(\d+))?/', strtolower($lastVersion), $matches)) {
-            throw new \RuntimeException('Invalid version ' . $lastVersion);
-        }
-
-        $base = $matches[1];
-        $currentPatch = $matches[2];
-
-        if (!isset($matches[3])) {
-            return $base . ($currentPatch + 1);
-        }
-
-        $stability = $matches[4];
-        $unstableVersion = (int)($matches[5] ?? 1);
-
-        return $base . $currentPatch . '-' . $stability . ($unstableVersion + 1);
-    }
-
-    private function getInitialTag(string $constraint, string $minimumStability): string
-    {
-        if(!preg_match('/^(v6\.\d+\.)\*$/', $constraint, $matches)) {
-            throw new \RuntimeException('No initial tag found!');
-        }
-
-        $suffix = '';
-        if ($minimumStability !== 'stable') {
-            $suffix = '-' . $minimumStability . '1';
-        }
-
-        return $matches[1] . '0' . $suffix;
+        return $rootDir;
     }
 }
