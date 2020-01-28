@@ -1,6 +1,8 @@
 FROM alpine:3.10
 
+ENV COMPOSER_HOME=/var/cache/composer
 ENV PROJECT_ROOT=/sw6
+ENV ARTIFACTS_DIR=/artifacts
 
 RUN apk --no-cache add \
         nginx supervisor curl zip rsync \
@@ -10,9 +12,10 @@ RUN apk --no-cache add \
         php7-mysqli php7-openssl php7-pdo_mysql \
         php7-session php7-simplexml php7-tokenizer php7-xml php7-xmlreader php7-xmlwriter \
         php7-zip php7-zlib php7-phar git \
-        gnu-libiconv \
+        gnu-libiconv curl \
     && adduser -u 1000 -D -h $PROJECT_ROOT sw6 sw6 \
-    && rm /etc/nginx/conf.d/default.conf
+    && rm /etc/nginx/conf.d/default.conf \
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 # Copy system configs
 COPY config/etc /etc
@@ -31,11 +34,7 @@ RUN mkdir -p $PROJECT_ROOT/config/jwt/
 COPY --chown=sw6 public.pem $PROJECT_ROOT/config/jwt/
 COPY --chown=sw6 private.pem $PROJECT_ROOT/config/jwt/
 
-RUN mkdir -p $PROJECT_ROOT/config/jwt/
-
 ADD --chown=sw6 . .
-
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 RUN composer install --dev --no-scripts --working-dir $PROJECT_ROOT \
     && composer install --ignore-platform-reqs --no-scripts --working-dir $PROJECT_ROOT/vendor/shopware/recovery \
