@@ -29,6 +29,10 @@ WORKDIR $PROJECT_ROOT
 
 USER sw6
 
+RUN mkdir -p $PROJECT_ROOT/config/jwt/
+COPY --chown=sw6 config/jwt/public.pem $PROJECT_ROOT/config/jwt/
+COPY --chown=sw6 config/jwt/private.pem $PROJECT_ROOT/config/jwt/
+
 ADD --chown=sw6 . .
 
 RUN bin/console assets:install \
