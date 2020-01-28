@@ -1,8 +1,6 @@
 FROM alpine:3.10
 
-ENV COMPOSER_HOME=/var/cache/composer
 ENV PROJECT_ROOT=/sw6
-ENV ARTIFACTS_DIR=/artifacts
 
 RUN apk --no-cache add \
         nginx supervisor curl zip rsync \
@@ -33,9 +31,16 @@ RUN mkdir -p $PROJECT_ROOT/config/jwt/
 COPY --chown=sw6 public.pem $PROJECT_ROOT/config/jwt/
 COPY --chown=sw6 private.pem $PROJECT_ROOT/config/jwt/
 
+RUN mkdir -p $PROJECT_ROOT/config/jwt/
+
 ADD --chown=sw6 . .
 
-RUN bin/console assets:install \
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+RUN composer install --dev --no-scripts --working-dir $PROJECT_ROOT \
+    && composer install --ignore-platform-reqs --no-scripts --working-dir $PROJECT_ROOT/vendor/shopware/recovery \
+    && composer install --ignore-platform-reqs --no-scripts --working-dir $PROJECT_ROOT/vendor/shopware/recovery/Common \
+    && bin/console assets:install \
     && rm -Rf var/cache \
     && mkdir -p var/cache var/queue \
     && php -r 'include_once "vendor/autoload.php"; echo (explode("@", PackageVersions\Versions::getVersion("shopware/core"))[0]);' > public/recovery/install/data/version
