@@ -12,10 +12,9 @@ RUN apk --no-cache add \
         php7-mysqli php7-openssl php7-pdo_mysql \
         php7-session php7-simplexml php7-tokenizer php7-xml php7-xmlreader php7-xmlwriter \
         php7-zip php7-zlib php7-phar git \
-        gnu-libiconv curl \
+        gnu-libiconv \
     && adduser -u 1000 -D -h $PROJECT_ROOT sw6 sw6 \
-    && rm /etc/nginx/conf.d/default.conf \
-    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    && rm /etc/nginx/conf.d/default.conf
 
 # Copy system configs
 COPY config/etc /etc
@@ -30,17 +29,11 @@ WORKDIR $PROJECT_ROOT
 
 USER sw6
 
-RUN mkdir -p $PROJECT_ROOT/config/jwt/
-COPY --chown=sw6 public.pem $PROJECT_ROOT/config/jwt/
-COPY --chown=sw6 private.pem $PROJECT_ROOT/config/jwt/
-
 ADD --chown=sw6 . .
 
-RUN composer install --dev --no-scripts --working-dir $PROJECT_ROOT \
-    && composer install --ignore-platform-reqs --no-scripts --working-dir $PROJECT_ROOT/vendor/shopware/recovery \
-    && composer install --ignore-platform-reqs --no-scripts --working-dir $PROJECT_ROOT/vendor/shopware/recovery/Common \
-    && bin/console assets:install \
+RUN bin/console assets:install \
     && rm -Rf var/cache \
+    && touch install.lock \
     && mkdir -p var/cache var/queue \
     && php -r 'include_once "vendor/autoload.php"; echo (explode("@", PackageVersions\Versions::getVersion("shopware/core"))[0]);' > public/recovery/install/data/version
 
