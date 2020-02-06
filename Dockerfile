@@ -36,11 +36,6 @@ COPY --chown=sw6 private.pem $PROJECT_ROOT/config/jwt/
 
 ADD --chown=sw6 . .
 
-RUN bin/console assets:install \
-    && rm -Rf var/cache \
-    && mkdir -p var/cache var/queue \
-    && php -r 'include_once "vendor/autoload.php"; echo (explode("@", PackageVersions\Versions::getVersion("shopware/core"))[0]);' > public/recovery/install/data/version
-
 # Expose the port nginx is reachable on
 EXPOSE 8000
 
